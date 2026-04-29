@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#0f766e">
+    <title>ExpiryWise | Retail Expiry Tracker</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="ExpiryWise overview">
+        <div class="brand-row">
+          <div class="logo" aria-hidden="true">EW</div>
+          <div>
+            <p class="eyebrow">Retail inventory</p>
+            <h1>ExpiryWise</h1>
+          </div>
+        </div>
+
+        <div class="metric-grid" aria-label="Inventory summary">
+          <div class="metric urgent">
+            <span id="expiredCount">0</span>
+            <small>Expired</small>
+          </div>
+          <div class="metric warn">
+            <span id="soonCount">0</span>
+            <small>Due in 14 days</small>
+          </div>
+          <div class="metric calm">
+            <span id="activeCount">0</span>
+            <small>Tracked</small>
+          </div>
+        </div>
+
+        <div class="sidebar-note">
+          <strong>Today</strong>
+          <span id="todayLabel"></span>
+        </div>
+      </aside>
+
+      <main class="workspace">
+        <section class="toolbar" aria-label="Inventory controls">
+          <div class="search-wrap">
+            <label for="searchInput">Search inventory</label>
+            <input id="searchInput" type="search" placeholder="Search by item, UPC, category, or location">
+          </div>
+
+          <div class="toolbar-actions">
+            <button class="icon-button" id="notifyBtn" type="button" title="Enable reminders" aria-label="Enable reminders">
+              <span aria-hidden="true">!</span>
+            </button>
+            <button class="icon-button" id="exportBtn" type="button" title="Export inventory" aria-label="Export inventory">
+              <span aria-hidden="true">↓</span>
+            </button>
+            <label class="icon-button file-button" title="Import inventory" aria-label="Import inventory">
+              <span aria-hidden="true">↑</span>
+              <input id="importInput" type="file" accept="application/json">
+            </label>
+          </div>
+        </section>
+
+        <section class="entry-grid">
+          <form class="entry-panel" id="productForm">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">Receiving workflow</p>
+                <h2>Add a product</h2>
+              </div>
+              <button class="ghost-button" id="seedBtn" type="button">Load demo</button>
+            </div>
+
+            <div class="scan-zone">
+              <div class="scan-copy">
+                <strong>Scan product label</strong>
+                <span>Uses the browser Barcode Detector when available. Manual entry stays ready as the reliable fallback.</span>
+              </div>
+              <div class="scan-actions">
+                <button id="scanBtn" type="button">Scan UPC</button>
+                <button id="stopScanBtn" type="button" class="secondary" hidden>Stop</button>
+              </div>
+              <video id="scanVideo" playsinline muted hidden></video>
+            </div>
+
+            <div class="form-grid">
+              <label>
+                UPC / SKU
+                <input id="upc" name="upc" inputmode="numeric" autocomplete="off" placeholder="Example: 639277543210">
+              </label>
+              <label>
+                Product name
+                <input id="name" name="name" required placeholder="Example: Granola bars">
+              </label>
+              <label>
+                Category
+                <select id="category" name="category">
+                  <option>Pantry</option>
+                  <option>Snacks</option>
+                  <option>Beverage</option>
+                  <option>Frozen</option>
+                  <option>Refrigerated</option>
+                  <option>Candy</option>
+                </select>
+              </label>
+              <label>
+                Location
+                <input id="location" name="location" placeholder="Aisle, shelf, endcap">
+              </label>
+              <label>
+                Quantity
+                <input id="quantity" name="quantity" type="number" min="1" value="1">
+              </label>
+              <label>
+                Expiry date
+                <input id="expiryDate" name="expiryDate" type="date" required>
+              </label>
+            </div>
+
+            <label>
+              Notes
+              <textarea id="notes" name="notes" rows="3" placeholder="Case count, markdown instructions, label condition"></textarea>
+            </label>
+
+            <button class="primary-button" type="submit">Save product</button>
+          </form>
+
+          <section class="review-panel" aria-label="Action queue">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">Action queue</p>
+                <h2>Markdown watchlist</h2>
+              </div>
+              <select id="statusFilter" aria-label="Filter inventory status">
+                <option value="all">All</option>
+                <option value="expired">Expired</option>
+                <option value="soon">Due soon</option>
+                <option value="ok">In date</option>
+                <option value="handled">Handled</option>
+              </select>
+            </div>
+            <div class="timeline" id="timeline"></div>
+          </section>
+        </section>
+
+        <section class="inventory-section">
+          <div class="panel-header">
+            <div>
+              <p class="eyebrow">Inventory</p>
+              <h2>Tracked products</h2>
+            </div>
+            <button class="ghost-button" id="clearHandledBtn" type="button">Clear handled</button>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Item</th>
+                  <th>Expiry</th>
+                  <th>Status</th>
+                  <th>Qty</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="inventoryBody"></tbody>
+            </table>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <template id="emptyStateTemplate">
+      <div class="empty-state">
+        <strong>No products match this view.</strong>
+        <span>Add a product or adjust the filter to see inventory here.</span>
+      </div>
+    </template>
+
+    <script src="app.js"></script>
+  </body>
+</html>

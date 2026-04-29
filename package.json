@@ -1,0 +1,19 @@
+{
+  "name": "expirywise",
+  "version": "1.0.0",
+  "description": "Mobile-first retail expiry tracker for scanning product labels, storing expiry dates, and surfacing markdown reminders.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "keywords": [
+    "inventory",
+    "retail",
+    "expiry-tracker",
+    "barcode",
+    "portfolio"
+  ],
+  "author": "",
+  "license": "MIT"
+}
