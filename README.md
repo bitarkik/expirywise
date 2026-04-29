@@ -1,3 +1,6 @@
+## 🚀 Live Demo
+https://expirywise.vercel.app
+
 # ExpiryWise
 
 ExpiryWise is a mobile-first retail inventory expiry tracker inspired by a real Dollar Tree receiving workflow. It helps store associates capture product details, enter expiry dates, and surface products that need markdown or removal checks before they expire.
