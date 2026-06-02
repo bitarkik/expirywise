@@ -1,9 +1,10 @@
-const CACHE_NAME = "expirywise-v1";
+const CACHE_NAME = "expirywise-v2";
 const APP_SHELL = [
   "./",
   "./index.html",
   "./styles.css",
   "./app.js",
+  "./label.js",
   "./manifest.webmanifest",
   "./icon.svg"
 ];

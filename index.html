@@ -78,13 +78,21 @@
             <div class="scan-zone">
               <div class="scan-copy">
                 <strong>Scan product label</strong>
-                <span>Uses the browser Barcode Detector when available. Manual entry stays ready as the reliable fallback.</span>
+                <span>Reads the barcode number when supported. Use label text parsing for receiving labels with item names, ship quantity, and dates.</span>
               </div>
               <div class="scan-actions">
                 <button id="scanBtn" type="button">Scan UPC</button>
                 <button id="stopScanBtn" type="button" class="secondary" hidden>Stop</button>
               </div>
               <video id="scanVideo" playsinline muted hidden></video>
+            </div>
+
+            <div class="label-parser">
+              <label>
+                Receiving label text
+                <textarea id="labelText" rows="4" placeholder="Paste OCR text from a box label, then parse it"></textarea>
+              </label>
+              <button id="parseLabelBtn" type="button" class="secondary">Parse label</button>
             </div>
 
             <div class="form-grid">
@@ -105,6 +113,7 @@
                   <option>Frozen</option>
                   <option>Refrigerated</option>
                   <option>Candy</option>
+                  <option>Pet Supplies</option>
                 </select>
               </label>
               <label>
@@ -114,6 +123,10 @@
               <label>
                 Quantity
                 <input id="quantity" name="quantity" type="number" min="1" value="1">
+              </label>
+              <label>
+                Received date
+                <input id="receivedDate" name="receivedDate" type="date">
               </label>
               <label>
                 Expiry date
@@ -181,5 +194,6 @@
     </template>
 
     <script src="app.js"></script>
+    <script src="label.js"></script>
   </body>
 </html>
