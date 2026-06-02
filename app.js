@@ -22,6 +22,7 @@ const sampleLookup = {
 let products = loadProducts();
 let scanStream = null;
 let scanTimer = null;
+let installPrompt = null;
 
 const els = {
   activeCount: document.querySelector("#activeCount"),
@@ -32,6 +33,7 @@ const els = {
   exportBtn: document.querySelector("#exportBtn"),
   form: document.querySelector("#productForm"),
   importInput: document.querySelector("#importInput"),
+  installBtn: document.querySelector("#installBtn"),
   inventoryBody: document.querySelector("#inventoryBody"),
   location: document.querySelector("#location"),
   name: document.querySelector("#name"),
@@ -65,10 +67,15 @@ els.seedBtn.addEventListener("click", loadDemo);
 els.clearHandledBtn.addEventListener("click", clearHandled);
 els.exportBtn.addEventListener("click", exportProducts);
 els.importInput.addEventListener("change", importProducts);
+els.installBtn.addEventListener("click", installApp);
 els.notifyBtn.addEventListener("click", requestNotifications);
 els.scanBtn.addEventListener("click", startScan);
 els.stopScanBtn.addEventListener("click", stopScan);
+window.addEventListener("beforeinstallprompt", handleInstallPrompt);
+window.addEventListener("appinstalled", handleAppInstalled);
+window.addEventListener("beforeunload", stopScan);
 
+registerServiceWorker();
 render();
 
 function saveProduct(event) {
@@ -76,12 +83,12 @@ function saveProduct(event) {
 
   const formData = new FormData(els.form);
   const product = {
-    id: crypto.randomUUID(),
+    id: createId(),
     upc: String(formData.get("upc") || "").trim(),
     name: String(formData.get("name") || "").trim(),
     category: String(formData.get("category") || "Pantry"),
     location: String(formData.get("location") || "").trim(),
-    quantity: Number(formData.get("quantity") || 1),
+    quantity: Math.max(1, Number(formData.get("quantity") || 1)),
     expiryDate: String(formData.get("expiryDate")),
     notes: String(formData.get("notes") || "").trim(),
     handled: false,
@@ -104,6 +111,34 @@ function fillFromLookup(upc) {
   els.category.value = match.category;
   els.location.value = match.location;
   showToast("Product details filled from the demo UPC lookup.");
+}
+
+function handleInstallPrompt(event) {
+  event.preventDefault();
+  installPrompt = event;
+  els.installBtn.hidden = false;
+}
+
+async function installApp() {
+  if (!installPrompt) {
+    showToast("Use your browser menu to add ExpiryWise to your home screen.");
+    return;
+  }
+
+  installPrompt.prompt();
+  const result = await installPrompt.userChoice;
+  installPrompt = null;
+  els.installBtn.hidden = true;
+
+  if (result.outcome === "accepted") {
+    showToast("ExpiryWise is ready from your home screen.");
+  }
+}
+
+function handleAppInstalled() {
+  installPrompt = null;
+  els.installBtn.hidden = true;
+  showToast("ExpiryWise installed.");
 }
 
 async function startScan() {
@@ -186,7 +221,7 @@ function renderTimeline(items) {
       <div class="date-badge">${expiry.getDate()}<small>${expiry.toLocaleString(undefined, { month: "short" })}</small></div>
       <div class="item-title">
         <strong>${escapeHtml(product.name)}</strong>
-        <span>${escapeHtml(product.location || product.category)} · ${status.label}</span>
+        <span>${escapeHtml(product.location || product.category)} / ${status.label}</span>
       </div>
       <span class="status-pill ${status.key}">${status.label}</span>
     `;
@@ -215,7 +250,7 @@ function renderTable(items) {
         <td>
           <div class="item-title">
             <strong>${escapeHtml(product.name)}</strong>
-            <span>${escapeHtml(product.upc || "No UPC")} · ${escapeHtml(product.category)} · ${escapeHtml(product.location || "No location")}</span>
+            <span>${escapeHtml(product.upc || "No UPC")} / ${escapeHtml(product.category)} / ${escapeHtml(product.location || "No location")}</span>
           </div>
         </td>
         <td>${formatDate(product.expiryDate)}</td>
@@ -331,7 +366,7 @@ function loadDemo() {
 function createDemoProducts() {
   return [
     {
-      id: crypto.randomUUID(),
+      id: createId(),
       upc: "639277543210",
       name: "Apple Cinnamon Granola Bars",
       category: "Snacks",
@@ -343,7 +378,7 @@ function createDemoProducts() {
       createdAt: new Date().toISOString()
     },
     {
-      id: crypto.randomUUID(),
+      id: createId(),
       upc: "874220145611",
       name: "Shelf Stable Almond Milk",
       category: "Beverage",
@@ -355,7 +390,7 @@ function createDemoProducts() {
       createdAt: new Date().toISOString()
     },
     {
-      id: crypto.randomUUID(),
+      id: createId(),
       upc: "051933210904",
       name: "Chicken Noodle Soup",
       category: "Pantry",
@@ -404,8 +439,29 @@ function importProducts(event) {
     } catch (error) {
       showToast("That file could not be imported.");
     }
+    event.target.value = "";
   });
   reader.readAsText(file);
+}
+
+function registerServiceWorker() {
+  if (!("serviceWorker" in navigator)) return;
+
+  window.addEventListener("load", () => {
+    navigator.serviceWorker
+      .register("./sw.js")
+      .catch(() => {
+        showToast("Offline mode could not be enabled in this browser.");
+      });
+  });
+}
+
+function createId() {
+  if (crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+
+  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
 function loadProducts() {

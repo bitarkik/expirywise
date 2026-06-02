@@ -1,5 +1,5 @@
-## 🚀 Live Demo
-https://expirywise.vercel.app
+## Live Demo
+https://bitarkik.github.io/expirywise/
 
 # ExpiryWise
 
@@ -17,6 +17,8 @@ Food expiry tracking in a store can become slow when the workflow depends on han
 - Automatic status calculation for expired, due soon, in-date, and handled products.
 - Markdown watchlist for products expiring within 14 days.
 - Browser notification reminder support.
+- Installable Progressive Web App support for Android home screen use.
+- Offline app shell caching so the tracker can still open without network access.
 - Search and filter by product, UPC, category, location, notes, or status.
 - Local JSON import/export for inventory backups.
 - Demo data for quick portfolio walkthroughs.
@@ -27,6 +29,7 @@ Food expiry tracking in a store can become slow when the workflow depends on han
 - CSS
 - JavaScript
 - LocalStorage for demo persistence
+- Progressive Web App manifest and service worker
 - Node.js static server
 
 This version intentionally avoids external dependencies so the project is easy to run, review, and deploy as a portfolio demo.
@@ -43,6 +46,8 @@ Then open:
 http://localhost:4173
 ```
 
+On Android Chrome, use the browser install prompt or Add to Home screen to launch ExpiryWise like an app.
+
 ## Demo UPCs
 
 These UPCs auto-fill sample product details:
@@ -54,6 +59,7 @@ These UPCs auto-fill sample product details:
 ## Project roadmap
 
 - Add OCR extraction for product labels using a service such as Google Vision API or Tesseract.
+- Add IndexedDB storage for larger personal inventory data.
 - Add a backend database with user accounts and store locations.
 - Add scheduled email or push notifications.
 - Add role-based views for associates and managers.
@@ -62,4 +68,4 @@ These UPCs auto-fill sample product details:
 
 ## Resume bullet
 
-Built a mobile-first retail expiry tracker that scans UPC labels, stores manually verified expiry dates, and automatically surfaces markdown reminders for products expiring within 14 days.
+Built an offline-first retail expiry tracker that scans UPC labels, stores manually verified expiry dates, installs on Android as a PWA, and automatically surfaces markdown reminders for products expiring within 14 days.

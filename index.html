@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#0f766e">
     <title>ExpiryWise | Retail Expiry Tracker</title>
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="icon" href="icon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="styles.css">
   </head>
   <body>
@@ -50,11 +52,14 @@
             <button class="icon-button" id="notifyBtn" type="button" title="Enable reminders" aria-label="Enable reminders">
               <span aria-hidden="true">!</span>
             </button>
+            <button class="icon-button" id="installBtn" type="button" title="Install app" aria-label="Install app" hidden>
+              <span aria-hidden="true">+</span>
+            </button>
             <button class="icon-button" id="exportBtn" type="button" title="Export inventory" aria-label="Export inventory">
-              <span aria-hidden="true">↓</span>
+              <span aria-hidden="true">v</span>
             </button>
             <label class="icon-button file-button" title="Import inventory" aria-label="Import inventory">
-              <span aria-hidden="true">↑</span>
+              <span aria-hidden="true">^</span>
               <input id="importInput" type="file" accept="application/json">
             </label>
           </div>
