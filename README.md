@@ -1,5 +1,5 @@
 ## Live Demo
-https://bitarkik.github.io/expirywise/
+https://expirywise.vercel.app
 
 # ExpiryWise
 
