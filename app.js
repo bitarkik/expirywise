@@ -28,7 +28,10 @@ const els = {
   activeCount: document.querySelector("#activeCount"),
   category: document.querySelector("#category"),
   clearHandledBtn: document.querySelector("#clearHandledBtn"),
+  categoryFilter: document.querySelector("#categoryFilter"),
+  confirmExpiryBtn: document.querySelector("#confirmExpiryBtn"),
   expiredCount: document.querySelector("#expiredCount"),
+  expiryPrompt: document.querySelector("#expiryPrompt"),
   expiryDate: document.querySelector("#expiryDate"),
   exportBtn: document.querySelector("#exportBtn"),
   form: document.querySelector("#productForm"),
@@ -39,12 +42,15 @@ const els = {
   name: document.querySelector("#name"),
   notes: document.querySelector("#notes"),
   notifyBtn: document.querySelector("#notifyBtn"),
+  promptExpiryDate: document.querySelector("#promptExpiryDate"),
   quantity: document.querySelector("#quantity"),
+  receivedDate: document.querySelector("#receivedDate"),
   scanBtn: document.querySelector("#scanBtn"),
   scanVideo: document.querySelector("#scanVideo"),
   searchInput: document.querySelector("#searchInput"),
   seedBtn: document.querySelector("#seedBtn"),
   soonCount: document.querySelector("#soonCount"),
+  sortFilter: document.querySelector("#sortFilter"),
   statusFilter: document.querySelector("#statusFilter"),
   stopScanBtn: document.querySelector("#stopScanBtn"),
   timeline: document.querySelector("#timeline"),
@@ -61,6 +67,8 @@ els.todayLabel.textContent = new Intl.DateTimeFormat(undefined, {
 
 els.form.addEventListener("submit", saveProduct);
 els.searchInput.addEventListener("input", render);
+els.categoryFilter.addEventListener("change", render);
+els.sortFilter.addEventListener("change", render);
 els.statusFilter.addEventListener("change", render);
 els.upc.addEventListener("change", () => fillFromLookup(els.upc.value.trim()));
 els.seedBtn.addEventListener("click", loadDemo);
@@ -71,11 +79,16 @@ els.installBtn.addEventListener("click", installApp);
 els.notifyBtn.addEventListener("click", requestNotifications);
 els.scanBtn.addEventListener("click", startScan);
 els.stopScanBtn.addEventListener("click", stopScan);
+els.confirmExpiryBtn.addEventListener("click", confirmScannedExpiry);
+document.querySelectorAll("[data-target-view]").forEach((button) => {
+  button.addEventListener("click", () => showView(button.dataset.targetView));
+});
 window.addEventListener("beforeinstallprompt", handleInstallPrompt);
 window.addEventListener("appinstalled", handleAppInstalled);
 window.addEventListener("beforeunload", stopScan);
 
 registerServiceWorker();
+renderCategoryOptions();
 render();
 
 function saveProduct(event) {
@@ -89,6 +102,7 @@ function saveProduct(event) {
     category: String(formData.get("category") || "Pantry"),
     location: String(formData.get("location") || "").trim(),
     quantity: Math.max(1, Number(formData.get("quantity") || 1)),
+    receivedDate: String(formData.get("receivedDate") || ""),
     expiryDate: String(formData.get("expiryDate")),
     notes: String(formData.get("notes") || "").trim(),
     handled: false,
@@ -100,7 +114,20 @@ function saveProduct(event) {
   els.form.reset();
   els.quantity.value = 1;
   showToast(`${product.name} is now tracked.`);
+  showView("inventory");
   render();
+}
+
+function showView(name) {
+  document.querySelectorAll(".app-view").forEach((view) => {
+    const active = view.dataset.view === name;
+    view.hidden = !active;
+    view.classList.toggle("active", active);
+  });
+
+  if (name === "inventory") {
+    render();
+  }
 }
 
 function fillFromLookup(upc) {
@@ -166,9 +193,9 @@ async function startScan() {
 
       const value = codes[0].rawValue;
       els.upc.value = value;
-      fillFromLookup(value);
+      window.fillFromLookup(value);
       stopScan();
-      showToast(`Scanned ${value}.`);
+      promptExpiryForScannedItem(value);
     }, 650);
   } catch (error) {
     showToast("Camera access was not available. Manual entry is ready.");
@@ -188,6 +215,7 @@ function stopScan() {
 
 function render() {
   const filtered = getFilteredProducts();
+  renderCategoryOptions();
   renderCounts();
   renderTimeline(filtered);
   renderTable(filtered);
@@ -241,8 +269,7 @@ function renderTable(items) {
     return;
   }
 
-  items
-    .sort((a, b) => new Date(a.expiryDate) - new Date(b.expiryDate))
+  getSortedProducts(items)
     .forEach((product) => {
       const status = getStatus(product);
       const row = document.createElement("tr");
@@ -250,7 +277,7 @@ function renderTable(items) {
         <td>
           <div class="item-title">
             <strong>${escapeHtml(product.name)}</strong>
-            <span>${escapeHtml(product.upc || "No UPC")} / ${escapeHtml(product.category)} / ${escapeHtml(product.location || "No location")}</span>
+            <span>${escapeHtml(product.upc || "No UPC")} / ${escapeHtml(product.category)} / ${escapeHtml(product.location || "No location")}${product.receivedDate ? ` / received ${formatDate(product.receivedDate)}` : ""}</span>
           </div>
         </td>
         <td>${formatDate(product.expiryDate)}</td>
@@ -289,6 +316,7 @@ function handleRowAction(event) {
 
 function getFilteredProducts() {
   const query = els.searchInput.value.trim().toLowerCase();
+  const category = els.categoryFilter.value;
   const status = els.statusFilter.value;
 
   return products.filter((product) => {
@@ -297,17 +325,71 @@ function getFilteredProducts() {
       product.upc,
       product.category,
       product.location,
-      product.notes
+      product.notes,
+      product.receivedDate
     ]
       .join(" ")
       .toLowerCase();
 
     const productStatus = getStatus(product).key;
     const matchesQuery = !query || haystack.includes(query);
+    const matchesCategory = category === "all" || category === product.category;
     const matchesStatus = status === "all" || status === productStatus;
 
-    return matchesQuery && matchesStatus;
+    return matchesQuery && matchesCategory && matchesStatus;
   });
+}
+
+function getSortedProducts(items) {
+  const sort = els.sortFilter.value;
+  return [...items].sort((a, b) => {
+    if (sort === "expiry-desc") return new Date(b.expiryDate) - new Date(a.expiryDate);
+    if (sort === "name-asc") return a.name.localeCompare(b.name);
+    if (sort === "qty-desc") return Number(b.quantity || 0) - Number(a.quantity || 0);
+    if (sort === "received-desc") return new Date(b.receivedDate || 0) - new Date(a.receivedDate || 0);
+    return new Date(a.expiryDate) - new Date(b.expiryDate);
+  });
+}
+
+function renderCategoryOptions() {
+  const selected = els.categoryFilter.value || "all";
+  const categories = [...new Set(products.map((product) => product.category).filter(Boolean))].sort();
+  els.categoryFilter.innerHTML = '<option value="all">All categories</option>';
+  categories.forEach((category) => {
+    const option = document.createElement("option");
+    option.value = category;
+    option.textContent = category;
+    els.categoryFilter.appendChild(option);
+  });
+  els.categoryFilter.value = categories.includes(selected) ? selected : "all";
+}
+
+function promptExpiryForScannedItem(value) {
+  if (!els.name.value.trim()) {
+    showToast(`Scanned ${value}. Add product details, then expiry date.`);
+    els.name.focus();
+    return;
+  }
+
+  els.promptExpiryDate.value = els.expiryDate.value || "";
+  if (typeof els.expiryPrompt.showModal === "function") {
+    els.expiryPrompt.showModal();
+  } else {
+    els.expiryDate.focus();
+  }
+  showToast(`Scanned ${value}. Add expiry date to save.`);
+}
+
+function confirmScannedExpiry(event) {
+  event.preventDefault();
+  if (!els.promptExpiryDate.value) {
+    showToast("Add an expiry date first.");
+    return;
+  }
+
+  els.expiryDate.value = els.promptExpiryDate.value;
+  els.expiryPrompt.close();
+  els.form.requestSubmit();
 }
 
 function getStatus(product) {

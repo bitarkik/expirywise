@@ -65,14 +65,30 @@
           </div>
         </section>
 
-        <section class="entry-grid">
+        <section class="home-view app-view active" id="homeView" data-view="home" aria-label="Home options">
+          <div class="option-grid">
+            <button class="option-card" type="button" data-target-view="add">
+              <span>Add a product</span>
+              <strong>Scan, parse label text, enter expiry, and save.</strong>
+            </button>
+            <button class="option-card" type="button" data-target-view="inventory">
+              <span>Inventory watchlist</span>
+              <strong>Review expired, due soon, tracked, and handled items.</strong>
+            </button>
+          </div>
+        </section>
+
+        <section class="entry-grid app-view" id="addView" data-view="add" hidden>
           <form class="entry-panel" id="productForm">
             <div class="panel-header">
               <div>
                 <p class="eyebrow">Receiving workflow</p>
                 <h2>Add a product</h2>
               </div>
-              <button class="ghost-button" id="seedBtn" type="button">Load demo</button>
+              <div class="panel-actions">
+                <button class="ghost-button" type="button" data-target-view="home">Home</button>
+                <button class="ghost-button" id="seedBtn" type="button">Load demo</button>
+              </div>
             </div>
 
             <div class="scan-zone">
@@ -141,50 +157,91 @@
 
             <button class="primary-button" type="submit">Save product</button>
           </form>
+        </section>
 
+        <section class="inventory-view app-view" id="inventoryView" data-view="inventory" hidden>
           <section class="review-panel" aria-label="Action queue">
             <div class="panel-header">
               <div>
                 <p class="eyebrow">Action queue</p>
                 <h2>Markdown watchlist</h2>
               </div>
-              <select id="statusFilter" aria-label="Filter inventory status">
-                <option value="all">All</option>
-                <option value="expired">Expired</option>
-                <option value="soon">Due soon</option>
-                <option value="ok">In date</option>
-                <option value="handled">Handled</option>
-              </select>
+              <button class="ghost-button" type="button" data-target-view="home">Home</button>
+            </div>
+            <div class="filter-grid">
+              <label>
+                Status
+                <select id="statusFilter" aria-label="Filter inventory status">
+                  <option value="all">All</option>
+                  <option value="expired">Expired</option>
+                  <option value="soon">Due in 14 days</option>
+                  <option value="ok">In date</option>
+                  <option value="handled">Handled</option>
+                </select>
+              </label>
+              <label>
+                Category
+                <select id="categoryFilter" aria-label="Filter inventory category">
+                  <option value="all">All categories</option>
+                </select>
+              </label>
+              <label>
+                Sort
+                <select id="sortFilter" aria-label="Sort inventory">
+                  <option value="expiry-asc">Expiry first</option>
+                  <option value="expiry-desc">Expiry last</option>
+                  <option value="name-asc">Name A-Z</option>
+                  <option value="qty-desc">Quantity high-low</option>
+                  <option value="received-desc">Recently received</option>
+                </select>
+              </label>
             </div>
             <div class="timeline" id="timeline"></div>
           </section>
-        </section>
 
-        <section class="inventory-section">
-          <div class="panel-header">
-            <div>
-              <p class="eyebrow">Inventory</p>
-              <h2>Tracked products</h2>
+          <section class="inventory-section">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">Inventory</p>
+                <h2>Tracked products</h2>
+              </div>
+              <button class="ghost-button" id="clearHandledBtn" type="button">Clear handled</button>
             </div>
-            <button class="ghost-button" id="clearHandledBtn" type="button">Clear handled</button>
-          </div>
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Item</th>
-                  <th>Expiry</th>
-                  <th>Status</th>
-                  <th>Qty</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody id="inventoryBody"></tbody>
-            </table>
-          </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Item</th>
+                    <th>Expiry</th>
+                    <th>Status</th>
+                    <th>Qty</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="inventoryBody"></tbody>
+              </table>
+            </div>
+          </section>
         </section>
       </main>
     </div>
+
+    <dialog class="expiry-dialog" id="expiryPrompt">
+      <form method="dialog" class="expiry-dialog-panel">
+        <div>
+          <p class="eyebrow">Final step</p>
+          <h2>Add expiry date</h2>
+        </div>
+        <label>
+          Expiry date
+          <input id="promptExpiryDate" type="date">
+        </label>
+        <div class="dialog-actions">
+          <button class="secondary" value="cancel" type="submit">Cancel</button>
+          <button class="primary-button" id="confirmExpiryBtn" value="default" type="submit">Add item</button>
+        </div>
+      </form>
+    </dialog>
 
     <template id="emptyStateTemplate">
       <div class="empty-state">
