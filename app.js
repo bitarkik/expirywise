@@ -23,6 +23,7 @@ let products = loadProducts();
 let scanStream = null;
 let scanTimer = null;
 let installPrompt = null;
+let inventoryMode = "action";
 
 const els = {
   activeCount: document.querySelector("#activeCount"),
@@ -38,6 +39,7 @@ const els = {
   importInput: document.querySelector("#importInput"),
   installBtn: document.querySelector("#installBtn"),
   inventoryBody: document.querySelector("#inventoryBody"),
+  inventoryTabs: document.querySelectorAll("[data-inventory-mode]"),
   location: document.querySelector("#location"),
   name: document.querySelector("#name"),
   notes: document.querySelector("#notes"),
@@ -82,6 +84,12 @@ els.stopScanBtn.addEventListener("click", stopScan);
 els.confirmExpiryBtn.addEventListener("click", confirmScannedExpiry);
 document.querySelectorAll("[data-target-view]").forEach((button) => {
   button.addEventListener("click", () => showView(button.dataset.targetView));
+});
+document.addEventListener("click", (event) => {
+  const inventoryTab = event.target.closest("[data-inventory-mode]");
+  if (inventoryTab) {
+    setInventoryMode(inventoryTab.dataset.inventoryMode);
+  }
 });
 window.addEventListener("beforeinstallprompt", handleInstallPrompt);
 window.addEventListener("appinstalled", handleAppInstalled);
@@ -128,6 +136,16 @@ function showView(name) {
   if (name === "inventory") {
     render();
   }
+}
+
+function setInventoryMode(mode) {
+  inventoryMode = mode;
+  els.inventoryTabs.forEach((button) => {
+    const active = button.dataset.inventoryMode === mode;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-selected", String(active));
+  });
+  render();
 }
 
 function fillFromLookup(upc) {
@@ -230,13 +248,16 @@ function renderCounts() {
 }
 
 function renderTimeline(items) {
-  const queue = items
+  const queue = getActionItems(items)
     .filter((product) => ["expired", "soon"].includes(getStatus(product).key) && !product.handled)
     .sort((a, b) => new Date(a.expiryDate) - new Date(b.expiryDate));
 
   els.timeline.innerHTML = "";
+  els.timeline.hidden = inventoryMode !== "action";
+  if (inventoryMode !== "action") return;
+
   if (!queue.length) {
-    els.timeline.appendChild(emptyState("No markdown checks are due right now."));
+    els.timeline.appendChild(emptyState("No products need action right now."));
     return;
   }
 
@@ -259,17 +280,19 @@ function renderTimeline(items) {
 
 function renderTable(items) {
   els.inventoryBody.innerHTML = "";
-  if (!items.length) {
+  const visibleItems = inventoryMode === "action" ? getActionItems(items) : items;
+
+  if (!visibleItems.length) {
     const row = document.createElement("tr");
     const cell = document.createElement("td");
     cell.colSpan = 5;
-    cell.appendChild(emptyState("No products match this inventory view."));
+    cell.appendChild(emptyState(inventoryMode === "action" ? "No expired or due-soon products match this view." : "No products match this inventory view."));
     row.appendChild(cell);
     els.inventoryBody.appendChild(row);
     return;
   }
 
-  getSortedProducts(items)
+  getSortedProducts(visibleItems)
     .forEach((product) => {
       const status = getStatus(product);
       const row = document.createElement("tr");
@@ -337,6 +360,13 @@ function getFilteredProducts() {
     const matchesStatus = status === "all" || status === productStatus;
 
     return matchesQuery && matchesCategory && matchesStatus;
+  });
+}
+
+function getActionItems(items) {
+  return items.filter((product) => {
+    const status = getStatus(product).key;
+    return !product.handled && ["expired", "soon"].includes(status);
   });
 }
 

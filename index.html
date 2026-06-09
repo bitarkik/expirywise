@@ -160,14 +160,23 @@
         </section>
 
         <section class="inventory-view app-view" id="inventoryView" data-view="inventory" hidden>
-          <section class="review-panel" aria-label="Action queue">
+          <section class="inventory-section">
             <div class="panel-header">
               <div>
-                <p class="eyebrow">Action queue</p>
-                <h2>Markdown watchlist</h2>
+                <p class="eyebrow">Inventory</p>
+                <h2>Inventory watchlist</h2>
               </div>
-              <button class="ghost-button" type="button" data-target-view="home">Home</button>
+              <div class="panel-actions">
+                <button class="ghost-button" id="clearHandledBtn" type="button">Clear handled</button>
+                <button class="ghost-button" type="button" data-target-view="home">Home</button>
+              </div>
             </div>
+
+            <div class="view-tabs" role="tablist" aria-label="Inventory view">
+              <button class="tab-button active" id="needsActionTab" type="button" data-inventory-mode="action" aria-selected="true">Needs action</button>
+              <button class="tab-button" id="allItemsTab" type="button" data-inventory-mode="all" aria-selected="false">All items</button>
+            </div>
+
             <div class="filter-grid">
               <label>
                 Status
@@ -196,17 +205,9 @@
                 </select>
               </label>
             </div>
-            <div class="timeline" id="timeline"></div>
-          </section>
 
-          <section class="inventory-section">
-            <div class="panel-header">
-              <div>
-                <p class="eyebrow">Inventory</p>
-                <h2>Tracked products</h2>
-              </div>
-              <button class="ghost-button" id="clearHandledBtn" type="button">Clear handled</button>
-            </div>
+            <div class="timeline" id="timeline"></div>
+
             <div class="table-wrap">
               <table>
                 <thead>

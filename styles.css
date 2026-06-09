@@ -372,6 +372,29 @@ textarea:focus {
   margin-top: 16px;
 }
 
+.view-tabs {
+  display: flex;
+  gap: 8px;
+  padding: 0 18px 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.tab-button {
+  min-height: 38px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--teal-dark);
+  padding: 8px 12px;
+  font-weight: 850;
+}
+
+.tab-button.active {
+  border-color: var(--teal);
+  background: var(--teal);
+  color: #ffffff;
+}
+
 .timeline-item {
   display: grid;
   grid-template-columns: auto 1fr auto;
