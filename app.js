@@ -27,6 +27,7 @@ let inventoryMode = "action";
 
 const els = {
   activeCount: document.querySelector("#activeCount"),
+  barcode: document.querySelector("#barcode"),
   category: document.querySelector("#category"),
   clearHandledBtn: document.querySelector("#clearHandledBtn"),
   categoryFilter: document.querySelector("#categoryFilter"),
@@ -44,6 +45,7 @@ const els = {
   name: document.querySelector("#name"),
   notes: document.querySelector("#notes"),
   notifyBtn: document.querySelector("#notifyBtn"),
+  price: document.querySelector("#price"),
   promptExpiryDate: document.querySelector("#promptExpiryDate"),
   quantity: document.querySelector("#quantity"),
   receivedDate: document.querySelector("#receivedDate"),
@@ -106,10 +108,12 @@ function saveProduct(event) {
   const product = {
     id: createId(),
     upc: String(formData.get("upc") || "").trim(),
+    barcode: String(formData.get("barcode") || "").trim(),
     name: String(formData.get("name") || "").trim(),
     category: String(formData.get("category") || "Pantry"),
     location: String(formData.get("location") || "").trim(),
     quantity: Math.max(1, Number(formData.get("quantity") || 1)),
+    price: normalizePrice(formData.get("price")),
     receivedDate: String(formData.get("receivedDate") || ""),
     expiryDate: String(formData.get("expiryDate")),
     notes: String(formData.get("notes") || "").trim(),
@@ -210,7 +214,8 @@ async function startScan() {
       if (!codes.length) return;
 
       const value = codes[0].rawValue;
-      els.upc.value = value;
+      els.barcode.value = value;
+      if (!els.upc.value.trim()) els.upc.value = value;
       window.fillFromLookup(value);
       stopScan();
       promptExpiryForScannedItem(value);
@@ -300,7 +305,7 @@ function renderTable(items) {
         <td>
           <div class="item-title">
             <strong>${escapeHtml(product.name)}</strong>
-            <span>${escapeHtml(product.upc || "No UPC")} / ${escapeHtml(product.category)} / ${escapeHtml(product.location || "No location")}${product.receivedDate ? ` / received ${formatDate(product.receivedDate)}` : ""}</span>
+            <span>${escapeHtml(product.upc || "No SKU")} / ${escapeHtml(product.category)} / ${escapeHtml(product.location || "No location")}${product.receivedDate ? ` / received ${formatDate(product.receivedDate)}` : ""}${product.price ? ` / $${escapeHtml(product.price)}` : ""}${product.barcode ? ` / barcode ${escapeHtml(product.barcode)}` : ""}</span>
           </div>
         </td>
         <td>${formatDate(product.expiryDate)}</td>
@@ -346,10 +351,12 @@ function getFilteredProducts() {
     const haystack = [
       product.name,
       product.upc,
+      product.barcode,
       product.category,
       product.location,
       product.notes,
-      product.receivedDate
+      product.receivedDate,
+      product.price
     ]
       .join(" ")
       .toLowerCase();
@@ -480,10 +487,12 @@ function createDemoProducts() {
     {
       id: createId(),
       upc: "639277543210",
+      barcode: "639277543210",
       name: "Apple Cinnamon Granola Bars",
       category: "Snacks",
       location: "Snack aisle",
       quantity: 8,
+      price: "1.25",
       expiryDate: addDays(new Date(), 10),
       notes: "New case received during morning stocking.",
       handled: false,
@@ -492,10 +501,12 @@ function createDemoProducts() {
     {
       id: createId(),
       upc: "874220145611",
+      barcode: "874220145611",
       name: "Shelf Stable Almond Milk",
       category: "Beverage",
       location: "Beverage wall",
       quantity: 12,
+      price: "1.25",
       expiryDate: addDays(new Date(), 28),
       notes: "Watch the back row on bottom shelf.",
       handled: false,
@@ -504,10 +515,12 @@ function createDemoProducts() {
     {
       id: createId(),
       upc: "051933210904",
+      barcode: "051933210904",
       name: "Chicken Noodle Soup",
       category: "Pantry",
       location: "Soup shelf",
       quantity: 5,
+      price: "1.25",
       expiryDate: addDays(new Date(), -2),
       notes: "Needs removal check.",
       handled: false,
@@ -613,6 +626,12 @@ function formatDate(value) {
     day: "numeric",
     year: "numeric"
   });
+}
+
+function normalizePrice(value) {
+  const match = String(value || "").match(/\d+(?:\.\d{1,2})?/);
+  if (!match) return "";
+  return Number(match[0]).toFixed(2);
 }
 
 function emptyState(text) {

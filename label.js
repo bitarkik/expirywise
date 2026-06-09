@@ -1,28 +1,39 @@
 const LABEL_LOOKUP_KEY = "expirywise-product-lookup";
 const LABEL_LOOKUP = {
   "7295217167": {
-    name: "WHISKAS CHICKEN & LIVER ENTREE",
+    name: "Whiskas Chicken & Liver Entree",
     category: "Pet Supplies",
     location: "Pet supplies",
+    barcode: "7295217167",
+    price: "1.75",
     quantity: 24,
     receivedDate: "2026-04-21"
   },
   "237838": {
-    name: "WHISKAS CHICKEN & LIVER ENTREE",
+    name: "Whiskas Chicken & Liver Entree",
     category: "Pet Supplies",
     location: "Pet supplies",
+    barcode: "7295217167",
+    price: "1.75",
     quantity: 24,
     receivedDate: "2026-04-21"
   }
 };
 
 const labelEls = {
+  barcode: document.querySelector("#barcode"),
   category: document.querySelector("#category"),
+  expiryDate: document.querySelector("#expiryDate"),
   form: document.querySelector("#productForm"),
+  labelPhotoInput: document.querySelector("#labelPhotoInput"),
   labelText: document.querySelector("#labelText"),
   location: document.querySelector("#location"),
   name: document.querySelector("#name"),
+  ocrProgress: document.querySelector("#ocrProgress"),
+  ocrStatus: document.querySelector("#ocrStatus"),
+  ocrStatusText: document.querySelector("#ocrStatusText"),
   parseLabelBtn: document.querySelector("#parseLabelBtn"),
+  price: document.querySelector("#price"),
   quantity: document.querySelector("#quantity"),
   receivedDate: document.querySelector("#receivedDate"),
   upc: document.querySelector("#upc")
@@ -32,6 +43,10 @@ if (labelEls.parseLabelBtn) {
   labelEls.parseLabelBtn.addEventListener("click", parseReceivingLabel);
 }
 
+if (labelEls.labelPhotoInput) {
+  labelEls.labelPhotoInput.addEventListener("change", scanReceivingLabelPhoto);
+}
+
 if (labelEls.form) {
   labelEls.form.addEventListener("submit", () => {
     window.setTimeout(() => {
@@ -39,6 +54,8 @@ if (labelEls.form) {
       if (!products.length) return;
 
       products[0].receivedDate = labelEls.receivedDate?.value || products[0].receivedDate || "";
+      products[0].price = normalizePrice(labelEls.price?.value || products[0].price || "");
+      products[0].barcode = labelEls.barcode?.value || products[0].barcode || "";
       localStorage.setItem("expirywise-products", JSON.stringify(products));
       rememberLabelProduct(products[0]);
     }, 0);
@@ -63,15 +80,64 @@ window.fillFromLookup = function fillFromLabelLookup(upc) {
 
 function parseReceivingLabel() {
   const parsed = extractReceivingLabel(labelEls.labelText?.value);
-  if (!Object.keys(parsed).length) {
+  if (!hasParsedFields(parsed)) {
     showToast("No label details found. Try pasting clearer label text.");
     return;
   }
 
-  if (parsed.sku) labelEls.upc.value = parsed.sku;
-  fillLabelFields(parsed);
-  window.fillFromLookup(labelEls.upc.value.trim());
+  applyReceivingLabel(parsed);
   showToast("Receiving label details filled.");
+}
+
+async function scanReceivingLabelPhoto(event) {
+  const file = event.target.files?.[0];
+  if (!file) return;
+
+  if (!window.Tesseract) {
+    showToast("OCR is not available yet. Try again online once, or paste label text manually.");
+    event.target.value = "";
+    return;
+  }
+
+  setOcrStatus(true, "Preparing OCR...", 0);
+
+  try {
+    const result = await Tesseract.recognize(file, "eng", {
+      logger(message) {
+        if (message.status) {
+          setOcrStatus(true, toTitleCase(message.status), message.progress || 0);
+        }
+      }
+    });
+    const text = result?.data?.text || "";
+    labelEls.labelText.value = text.trim();
+
+    const parsed = extractReceivingLabel(text);
+    if (!hasParsedFields(parsed)) {
+      showToast("OCR finished, but no label fields were found. You can correct the text and parse again.");
+      return;
+    }
+
+    applyReceivingLabel(parsed);
+    showToast("Label scanned. Review the fields, then add expiry date.");
+
+    if (labelEls.name?.value.trim() && typeof window.promptExpiryForScannedItem === "function") {
+      window.promptExpiryForScannedItem(labelEls.upc.value.trim() || labelEls.barcode.value.trim() || "label");
+    }
+  } catch (error) {
+    showToast("OCR could not read that photo. Manual entry is still ready.");
+  } finally {
+    setOcrStatus(false, "", 0);
+    event.target.value = "";
+  }
+}
+
+function applyReceivingLabel(parsed) {
+  const lookupKey = parsed.sku || parsed.barcode || labelEls.upc?.value.trim() || labelEls.barcode?.value.trim();
+  if (lookupKey) window.fillFromLookup(lookupKey);
+  if (parsed.sku && labelEls.upc) labelEls.upc.value = parsed.sku;
+  if (parsed.barcode && labelEls.barcode) labelEls.barcode.value = parsed.barcode;
+  fillLabelFields(parsed);
 }
 
 function fillLabelFields(details) {
@@ -80,10 +146,12 @@ function fillLabelFields(details) {
   if (details.location && labelEls.location) labelEls.location.value = details.location;
   if (details.quantity && labelEls.quantity) labelEls.quantity.value = details.quantity;
   if (details.receivedDate && labelEls.receivedDate) labelEls.receivedDate.value = details.receivedDate;
+  if (details.price && labelEls.price) labelEls.price.value = normalizePrice(details.price);
+  if (details.barcode && labelEls.barcode) labelEls.barcode.value = details.barcode;
 }
 
 function extractReceivingLabel(text) {
-  const raw = String(text || "").toUpperCase();
+  const raw = normalizeOcrText(text);
   const lines = raw
     .split(/\r?\n/)
     .map((line) => line.trim())
@@ -99,19 +167,31 @@ function extractReceivingLabel(text) {
     parsed.receivedDate = `${year}-${dateMatch[1]}-${dateMatch[2]}`;
   }
 
+  const priceMatch = raw.match(/\$\s*(\d+(?:\.\d{1,2})?)\b/);
+  if (priceMatch) parsed.price = normalizePrice(priceMatch[1]);
+
   const barcodeLine = [...lines].reverse().find((line) => /^\d{8,14}$/.test(line));
   const itemLine = lines.find((line) => /^\d{5,6}$/.test(line));
-  parsed.sku = itemLine || barcodeLine || "";
+  if (itemLine) parsed.sku = itemLine;
+  if (barcodeLine) parsed.barcode = barcodeLine;
+  if (!parsed.sku && barcodeLine) parsed.sku = barcodeLine;
 
-  if (lines.some((line) => /\bPET SUPPLIES\b/.test(line))) {
+  const categoryLine = lines.find((line) => /^\d{2,3}\s+[A-Z][A-Z '&-]{2,}$/.test(line));
+  if (categoryLine) {
+    parsed.category = toTitleCase(categoryLine.replace(/^\d{2,3}\s+/, ""));
+    parsed.location = parsed.category;
+  } else if (lines.some((line) => /\bPET SUPPLIES\b/.test(line))) {
     parsed.category = "Pet Supplies";
-    parsed.location = "Pet supplies";
+    parsed.location = "Pet Supplies";
   }
 
   const nameLine = lines.find(
     (line) =>
-      /^[A-Z][A-Z '&-]{8,}$/.test(line) &&
-      !/\b(CTN|SHP|PET SUPPLIES|CD)\b/.test(line)
+      /^[A-Z][A-Z0-9 '&.,-]{8,}$/.test(line) &&
+      /[A-Z]{3}/.test(line) &&
+      !/^\d{2,3}\s+[A-Z]/.test(line) &&
+      !/\b(CTN|SHP|PET SUPPLIES|CD)\b/.test(line) &&
+      !/\$/.test(line)
   );
   if (nameLine) parsed.name = toTitleCase(nameLine);
 
@@ -126,6 +206,8 @@ function rememberLabelProduct(product) {
     name: product.name,
     category: product.category,
     location: product.location,
+    barcode: product.barcode,
+    price: product.price,
     quantity: product.quantity,
     receivedDate: product.receivedDate
   };
@@ -156,3 +238,32 @@ function toTitleCase(value) {
     .toLowerCase()
     .replace(/\b[a-z]/g, (letter) => letter.toUpperCase());
 }
+
+function normalizeOcrText(text) {
+  return String(text || "")
+    .toUpperCase()
+    .replace(/[|]/g, "1")
+    .replace(/[“”]/g, '"')
+    .replace(/[‘’]/g, "'")
+    .replace(/\b5HP\b/g, "SHP");
+}
+
+function normalizePrice(value) {
+  const match = String(value || "").match(/\d+(?:\.\d{1,2})?/);
+  if (!match) return "";
+  return Number(match[0]).toFixed(2);
+}
+
+function hasParsedFields(parsed) {
+  return ["sku", "barcode", "name", "category", "quantity", "receivedDate", "price"].some((key) => parsed[key]);
+}
+
+function setOcrStatus(visible, text, progress) {
+  if (!labelEls.ocrStatus) return;
+  labelEls.ocrStatus.hidden = !visible;
+  if (labelEls.ocrStatusText) labelEls.ocrStatusText.textContent = text || "Reading label...";
+  if (labelEls.ocrProgress) labelEls.ocrProgress.value = Math.max(0, Math.min(1, Number(progress) || 0));
+}
+
+window.extractReceivingLabel = extractReceivingLabel;
+window.applyReceivingLabel = applyReceivingLabel;

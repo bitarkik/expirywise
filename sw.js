@@ -1,10 +1,10 @@
-const CACHE_NAME = "expirywise-v4";
+const CACHE_NAME = "expirywise-v20";
 const APP_SHELL = [
   "./",
   "./index.html",
   "./styles.css",
-  "./app.js?v=4",
-  "./label.js?v=4",
+  "./app.js?v=20",
+  "./label.js?v=20",
   "./manifest.webmanifest",
   "./icon.svg"
 ];
@@ -40,7 +40,10 @@ self.addEventListener("fetch", (event) => {
           caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
           return response;
         })
-        .catch(() => caches.match("./index.html"));
+        .catch(() => {
+          if (event.request.mode === "navigate") return caches.match("./index.html");
+          return caches.match(event.request);
+        });
     })
   );
 });

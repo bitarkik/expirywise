@@ -94,11 +94,19 @@
             <div class="scan-zone">
               <div class="scan-copy">
                 <strong>Scan product label</strong>
-                <span>Reads the barcode number when supported. Use label text parsing for receiving labels with item names, ship quantity, and dates.</span>
+                <span>Scan the box label photo for SKU, name, category, quantity, received date, and price. Barcode scan is still available when supported.</span>
               </div>
               <div class="scan-actions">
-                <button id="scanBtn" type="button">Scan UPC</button>
+                <label class="secondary label-photo-button" for="labelPhotoInput">
+                  Scan box label
+                  <input id="labelPhotoInput" type="file" accept="image/*" capture="environment">
+                </label>
+                <button id="scanBtn" type="button">Scan barcode</button>
                 <button id="stopScanBtn" type="button" class="secondary" hidden>Stop</button>
+              </div>
+              <div class="ocr-status" id="ocrStatus" hidden>
+                <span id="ocrStatusText">Preparing OCR...</span>
+                <progress id="ocrProgress" max="1" value="0"></progress>
               </div>
               <video id="scanVideo" playsinline muted hidden></video>
             </div>
@@ -113,8 +121,12 @@
 
             <div class="form-grid">
               <label>
-                UPC / SKU
-                <input id="upc" name="upc" inputmode="numeric" autocomplete="off" placeholder="Example: 639277543210">
+                SKU
+                <input id="upc" name="upc" inputmode="numeric" autocomplete="off" placeholder="Example: 237838">
+              </label>
+              <label>
+                Barcode
+                <input id="barcode" name="barcode" inputmode="numeric" autocomplete="off" placeholder="Example: 7295217167">
               </label>
               <label>
                 Product name
@@ -139,6 +151,10 @@
               <label>
                 Quantity
                 <input id="quantity" name="quantity" type="number" min="1" value="1">
+              </label>
+              <label>
+                Price
+                <input id="price" name="price" inputmode="decimal" placeholder="Example: 1.75">
               </label>
               <label>
                 Received date
@@ -251,7 +267,8 @@
       </div>
     </template>
 
-    <script src="app.js?v=4"></script>
-    <script src="label.js?v=4"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+    <script src="app.js?v=20"></script>
+    <script src="label.js?v=20"></script>
   </body>
 </html>
