@@ -197,7 +197,7 @@ textarea:focus {
 }
 
 .app-view[hidden] {
-  display: none;
+  display: none !important;
 }
 
 .home-view {
