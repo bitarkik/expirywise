@@ -46,6 +46,7 @@ if (labelEls.parseLabelBtn) {
 }
 
 if (labelEls.labelPhotoInput) {
+  labelEls.labelPhotoInput.addEventListener("click", scanNativeReceivingLabelPhoto);
   labelEls.labelPhotoInput.addEventListener("change", scanReceivingLabelPhoto);
 }
 
@@ -92,6 +93,8 @@ function parseReceivingLabel() {
 }
 
 async function scanReceivingLabelPhoto(event) {
+  if (hasNativeOcr()) return;
+
   const file = event.target.files?.[0];
   if (!file) return;
 
@@ -136,6 +139,51 @@ async function scanReceivingLabelPhoto(event) {
   } finally {
     setOcrStatus(false, "", 0);
     event.target.value = "";
+  }
+}
+
+async function scanNativeReceivingLabelPhoto(event) {
+  if (!hasNativeOcr()) return;
+  event.preventDefault();
+
+  const plugins = window.Capacitor.Plugins;
+  setOcrStatus(true, "Opening camera...", 0);
+
+  try {
+    const photo = await plugins.Camera.getPhoto({
+      quality: 92,
+      allowEditing: false,
+      resultType: "uri",
+      source: "CAMERA"
+    });
+    const path = photo.path || photo.webPath;
+    if (!path) throw new Error("Camera did not return a path");
+
+    setOcrStatus(true, "Reading label with ML Kit...", 0.2);
+    const result = await plugins.ExpiryOcr.recognizeText({ path });
+    handleRecognizedLabelText(result?.text || "");
+  } catch (error) {
+    showToast("Native label scan did not finish. Manual entry is still ready.");
+  } finally {
+    setOcrStatus(false, "", 0);
+    labelEls.labelPhotoInput.value = "";
+  }
+}
+
+function handleRecognizedLabelText(text) {
+  labelEls.labelText.value = String(text || "").trim();
+
+  const parsed = extractReceivingLabel(text);
+  if (!hasParsedFields(parsed)) {
+    showToast("OCR finished, but no label fields were found. You can correct the text and parse again.");
+    return;
+  }
+
+  applyReceivingLabel(parsed);
+  showToast("Label scanned. Review the fields, then add expiry date.");
+
+  if (labelEls.name?.value.trim() && typeof window.promptExpiryForScannedItem === "function") {
+    window.promptExpiryForScannedItem(labelEls.upc.value.trim() || labelEls.barcode.value.trim() || "label");
   }
 }
 
@@ -329,6 +377,10 @@ function closeLoadedImage(image) {
   if (typeof image.close === "function") {
     image.close();
   }
+}
+
+function hasNativeOcr() {
+  return Boolean(window.Capacitor?.isNativePlatform?.() && window.Capacitor?.Plugins?.Camera && window.Capacitor?.Plugins?.ExpiryOcr);
 }
 
 function normalizePrice(value) {

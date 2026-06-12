@@ -7,19 +7,20 @@ ExpiryWise is a mobile-first retail inventory expiry tracker inspired by a real 
 
 ## Why this project exists
 
-Food expiry tracking in a store can become slow when the workflow depends on handwritten logs. This project explores a faster digital version: scan a product UPC when possible, save the expiry date manually for accuracy, and keep an always-visible action queue for items expiring within 14 days.
+Food expiry tracking in a store can become slow when the workflow depends on handwritten logs. This project explores a faster digital version: scan a receiving label when possible, save the expiry date manually for accuracy, and keep an always-visible action queue for items expiring within 14 days.
 
 ## Features
 
-- Add products with UPC/SKU, name, category, location, quantity, expiry date, and notes.
-- Browser-based barcode scanning using the experimental `BarcodeDetector` API when supported.
-- Manual entry fallback for browsers or devices without barcode support.
+- Add products with SKU, name, category, location, quantity, received date, price, expiry date, and notes.
+- Android-native label OCR bridge using Google ML Kit Text Recognition through Capacitor.
+- Browser/PWA OCR fallback using Tesseract.js when native Android OCR is unavailable.
+- Manual entry fallback when OCR output needs correction.
 - Automatic status calculation for expired, due soon, in-date, and handled products.
 - Markdown watchlist for products expiring within 14 days.
 - Browser notification reminder support.
 - Installable Progressive Web App support for Android home screen use.
 - Offline app shell caching so the tracker can still open without network access.
-- Search and filter by product, UPC, category, location, notes, or status.
+- Search and filter by product, SKU, category, location, notes, or status.
 - Local JSON import/export for inventory backups.
 - Demo data for quick portfolio walkthroughs.
 
@@ -28,16 +29,19 @@ Food expiry tracking in a store can become slow when the workflow depends on han
 - HTML
 - CSS
 - JavaScript
+- Capacitor Android
+- Google ML Kit Text Recognition
 - LocalStorage for demo persistence
 - Progressive Web App manifest and service worker
 - Node.js static server
 
-This version intentionally avoids external dependencies so the project is easy to run, review, and deploy as a portfolio demo.
+The web app still deploys as a static PWA, while the Android project adds a native scanner for better label OCR.
 
 ## Run locally
 
 ```bash
-node server.js
+npm install
+npm run dev
 ```
 
 Then open:
@@ -47,6 +51,21 @@ http://localhost:4173
 ```
 
 On Android Chrome, use the browser install prompt or Add to Home screen to launch ExpiryWise like an app.
+
+## Android scanner
+
+EW 3.0 includes a Capacitor Android project with a native ML Kit OCR bridge.
+
+Useful commands:
+
+```bash
+npm install
+npm run build
+npm run cap:sync
+npm run android:open
+```
+
+Android builds require Android Studio with a JDK and Android SDK installed. The native scanner uses `ExpiryOcrPlugin` to return recognized label text to the existing Dollar Tree parser.
 
 ## Demo UPCs
 
@@ -58,7 +77,7 @@ These UPCs auto-fill sample product details:
 
 ## Project roadmap
 
-- Add OCR extraction for product labels using a service such as Google Vision API or Tesseract.
+- Build and test the native Android ML Kit scanner on a physical phone.
 - Add IndexedDB storage for larger personal inventory data.
 - Add a backend database with user accounts and store locations.
 - Add scheduled email or push notifications.
@@ -68,4 +87,4 @@ These UPCs auto-fill sample product details:
 
 ## Resume bullet
 
-Built an offline-first retail expiry tracker that scans UPC labels, stores manually verified expiry dates, installs on Android as a PWA, and automatically surfaces markdown reminders for products expiring within 14 days.
+Built an offline-first retail expiry tracker with a Capacitor Android shell, native ML Kit label OCR, local inventory persistence, and an action queue for products expiring within 14 days.
