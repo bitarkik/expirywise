@@ -1,6 +1,6 @@
 const LABEL_LOOKUP_KEY = "expirywise-product-lookup";
-const OCR_MAX_EDGE = 1600;
-const OCR_JPEG_QUALITY = 0.82;
+const OCR_MAX_EDGE = 2200;
+const OCR_JPEG_QUALITY = 0.92;
 const LABEL_LOOKUP = {
   "7295217167": {
     name: "Whiskas Chicken & Liver Entree",
@@ -108,6 +108,8 @@ async function scanReceivingLabelPhoto(event) {
     setOcrStatus(true, "Reading label...", 0.05);
 
     const result = await Tesseract.recognize(ocrImage, "eng", {
+      tessedit_pageseg_mode: "6",
+      preserve_interword_spaces: "1",
       logger(message) {
         if (message.status) {
           setOcrStatus(true, toTitleCase(message.status), message.progress || 0);
@@ -163,12 +165,13 @@ function extractReceivingLabel(text) {
     .filter(Boolean);
   const parsed = {};
 
-  const shipMatch = raw.match(/\bSHP\s+(\d{1,4})\b/);
+  const shipMatch = raw.match(/\bSHP\s*(\d{1,4})\b/);
   if (shipMatch) parsed.quantity = Number(shipMatch[1]);
 
-  const dateMatch = raw.match(/\b(\d{2})\/(\d{2})\/(\d{2,4})\b/);
+  const dateMatch = raw.match(/\b(\d{2})\/(\d{2})\/([0-9OCQ]{2,4})\b/);
   if (dateMatch) {
-    const year = Number(dateMatch[3].length === 2 ? `20${dateMatch[3]}` : dateMatch[3]);
+    const normalizedYear = dateMatch[3].replace(/[OCQ]/g, "6");
+    const year = Number(normalizedYear.length === 2 ? `20${normalizedYear}` : normalizedYear);
     parsed.receivedDate = `${year}-${dateMatch[1]}-${dateMatch[2]}`;
   }
 
@@ -181,9 +184,9 @@ function extractReceivingLabel(text) {
   if (barcodeLine) parsed.barcode = barcodeLine;
   if (!parsed.sku && barcodeLine) parsed.sku = barcodeLine;
 
-  const categoryLine = lines.find((line) => /^\d{2,3}\s+[A-Z][A-Z '&-]{2,}$/.test(line));
+  const categoryLine = lines.find((line) => /^\d{2,3}\s*[A-Z][A-Z '&-]{2,}$/.test(line));
   if (categoryLine) {
-    parsed.category = toTitleCase(categoryLine.replace(/^\d{2,3}\s+/, ""));
+    parsed.category = toTitleCase(categoryLine.replace(/^\d{2,3}\s*/, ""));
     parsed.location = parsed.category;
   } else if (lines.some((line) => /\bPET SUPPLIES\b/.test(line))) {
     parsed.category = "Pet Supplies";
@@ -250,6 +253,8 @@ function normalizeOcrText(text) {
     .replace(/[|]/g, "1")
     .replace(/[“”]/g, '"')
     .replace(/[‘’]/g, "'")
+    .replace(/\bCRV\b/g, "CTN")
+    .replace(/\bCIN\b/g, "CTN")
     .replace(/\b5HP\b/g, "SHP");
 }
 
@@ -272,6 +277,7 @@ async function prepareImageForOcr(file) {
   context.fillRect(0, 0, width, height);
   context.drawImage(image, 0, 0, width, height);
   closeLoadedImage(image);
+  enhanceLabelCanvas(context, width, height);
 
   return new Promise((resolve) => {
     canvas.toBlob(
@@ -280,6 +286,23 @@ async function prepareImageForOcr(file) {
       OCR_JPEG_QUALITY
     );
   });
+}
+
+function enhanceLabelCanvas(context, width, height) {
+  const imageData = context.getImageData(0, 0, width, height);
+  const data = imageData.data;
+
+  for (let index = 0; index < data.length; index += 4) {
+    const gray = data[index] * 0.299 + data[index + 1] * 0.587 + data[index + 2] * 0.114;
+    const contrast = Math.max(0, Math.min(255, (gray - 128) * 1.9 + 128));
+    const cleaned = contrast < 185 ? 0 : 255;
+    data[index] = cleaned;
+    data[index + 1] = cleaned;
+    data[index + 2] = cleaned;
+    data[index + 3] = 255;
+  }
+
+  context.putImageData(imageData, 0, 0);
 }
 
 async function loadImageForResize(file) {
