@@ -21,7 +21,7 @@ const types = {
 const server = http.createServer((req, res) => {
   const urlPath = decodeURIComponent(req.url.split("?")[0]).replace(/^\/+/, "");
   const safePath = path.normalize(urlPath).replace(/^(\.\.[/\\])+/, "");
-  const filePath = path.join(root, safePath === "." ? "index.html" : safePath);
+  const filePath = path.join(root, safePath === "" || safePath === "." ? "index.html" : safePath);
 
   if (!filePath.startsWith(root)) {
     res.writeHead(403);

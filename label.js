@@ -1,4 +1,6 @@
 const LABEL_LOOKUP_KEY = "expirywise-product-lookup";
+const OCR_MAX_EDGE = 1600;
+const OCR_JPEG_QUALITY = 0.82;
 const LABEL_LOOKUP = {
   "7295217167": {
     name: "Whiskas Chicken & Liver Entree",
@@ -99,10 +101,13 @@ async function scanReceivingLabelPhoto(event) {
     return;
   }
 
-  setOcrStatus(true, "Preparing OCR...", 0);
+  setOcrStatus(true, "Preparing photo...", 0);
 
   try {
-    const result = await Tesseract.recognize(file, "eng", {
+    const ocrImage = await prepareImageForOcr(file);
+    setOcrStatus(true, "Reading label...", 0.05);
+
+    const result = await Tesseract.recognize(ocrImage, "eng", {
       logger(message) {
         if (message.status) {
           setOcrStatus(true, toTitleCase(message.status), message.progress || 0);
@@ -125,7 +130,7 @@ async function scanReceivingLabelPhoto(event) {
       window.promptExpiryForScannedItem(labelEls.upc.value.trim() || labelEls.barcode.value.trim() || "label");
     }
   } catch (error) {
-    showToast("OCR could not read that photo. Manual entry is still ready.");
+    showToast("That photo could not be processed. Try a closer label photo or paste label text manually.");
   } finally {
     setOcrStatus(false, "", 0);
     event.target.value = "";
@@ -246,6 +251,61 @@ function normalizeOcrText(text) {
     .replace(/[“”]/g, '"')
     .replace(/[‘’]/g, "'")
     .replace(/\b5HP\b/g, "SHP");
+}
+
+async function prepareImageForOcr(file) {
+  const image = await loadImageForResize(file);
+  const scale = Math.min(1, OCR_MAX_EDGE / Math.max(image.width, image.height));
+  const width = Math.max(1, Math.round(image.width * scale));
+  const height = Math.max(1, Math.round(image.height * scale));
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+
+  const context = canvas.getContext("2d", { alpha: false });
+  if (!context) {
+    closeLoadedImage(image);
+    return file;
+  }
+
+  context.fillStyle = "#ffffff";
+  context.fillRect(0, 0, width, height);
+  context.drawImage(image, 0, 0, width, height);
+  closeLoadedImage(image);
+
+  return new Promise((resolve) => {
+    canvas.toBlob(
+      (blob) => resolve(blob || file),
+      "image/jpeg",
+      OCR_JPEG_QUALITY
+    );
+  });
+}
+
+async function loadImageForResize(file) {
+  if ("createImageBitmap" in window) {
+    return createImageBitmap(file);
+  }
+
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const image = new Image();
+    image.onload = () => {
+      URL.revokeObjectURL(url);
+      resolve(image);
+    };
+    image.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("Could not load image"));
+    };
+    image.src = url;
+  });
+}
+
+function closeLoadedImage(image) {
+  if (typeof image.close === "function") {
+    image.close();
+  }
 }
 
 function normalizePrice(value) {

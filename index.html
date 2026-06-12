@@ -45,7 +45,7 @@
         <section class="toolbar" aria-label="Inventory controls">
           <div class="search-wrap">
             <label for="searchInput">Search inventory</label>
-            <input id="searchInput" type="search" placeholder="Search by item, UPC, category, or location">
+            <input id="searchInput" type="search" placeholder="Search by item, SKU, category, or location">
           </div>
 
           <div class="toolbar-actions">
@@ -94,21 +94,18 @@
             <div class="scan-zone">
               <div class="scan-copy">
                 <strong>Scan product label</strong>
-                <span>Scan the box label photo for SKU, name, category, quantity, received date, and price. Barcode scan is still available when supported.</span>
+                <span>Scan the box label photo for SKU, name, category, quantity, received date, and price.</span>
               </div>
               <div class="scan-actions">
                 <label class="secondary label-photo-button" for="labelPhotoInput">
                   Scan box label
                   <input id="labelPhotoInput" type="file" accept="image/*" capture="environment">
                 </label>
-                <button id="scanBtn" type="button">Scan barcode</button>
-                <button id="stopScanBtn" type="button" class="secondary" hidden>Stop</button>
               </div>
               <div class="ocr-status" id="ocrStatus" hidden>
                 <span id="ocrStatusText">Preparing OCR...</span>
                 <progress id="ocrProgress" max="1" value="0"></progress>
               </div>
-              <video id="scanVideo" playsinline muted hidden></video>
             </div>
 
             <div class="label-parser">
@@ -124,10 +121,7 @@
                 SKU
                 <input id="upc" name="upc" inputmode="numeric" autocomplete="off" placeholder="Example: 237838">
               </label>
-              <label>
-                Barcode
-                <input id="barcode" name="barcode" inputmode="numeric" autocomplete="off" placeholder="Example: 7295217167">
-              </label>
+              <input id="barcode" name="barcode" type="hidden">
               <label>
                 Product name
                 <input id="name" name="name" required placeholder="Example: Granola bars">
@@ -268,7 +262,7 @@
     </template>
 
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-    <script src="app.js?v=20"></script>
-    <script src="label.js?v=20"></script>
+    <script src="app.js?v=21"></script>
+    <script src="label.js?v=21"></script>
   </body>
 </html>

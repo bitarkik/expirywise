@@ -20,8 +20,6 @@ const sampleLookup = {
 };
 
 let products = loadProducts();
-let scanStream = null;
-let scanTimer = null;
 let installPrompt = null;
 let inventoryMode = "action";
 
@@ -49,14 +47,11 @@ const els = {
   promptExpiryDate: document.querySelector("#promptExpiryDate"),
   quantity: document.querySelector("#quantity"),
   receivedDate: document.querySelector("#receivedDate"),
-  scanBtn: document.querySelector("#scanBtn"),
-  scanVideo: document.querySelector("#scanVideo"),
   searchInput: document.querySelector("#searchInput"),
   seedBtn: document.querySelector("#seedBtn"),
   soonCount: document.querySelector("#soonCount"),
   sortFilter: document.querySelector("#sortFilter"),
   statusFilter: document.querySelector("#statusFilter"),
-  stopScanBtn: document.querySelector("#stopScanBtn"),
   timeline: document.querySelector("#timeline"),
   todayLabel: document.querySelector("#todayLabel"),
   upc: document.querySelector("#upc")
@@ -81,8 +76,6 @@ els.exportBtn.addEventListener("click", exportProducts);
 els.importInput.addEventListener("change", importProducts);
 els.installBtn.addEventListener("click", installApp);
 els.notifyBtn.addEventListener("click", requestNotifications);
-els.scanBtn.addEventListener("click", startScan);
-els.stopScanBtn.addEventListener("click", stopScan);
 els.confirmExpiryBtn.addEventListener("click", confirmScannedExpiry);
 document.querySelectorAll("[data-target-view]").forEach((button) => {
   button.addEventListener("click", () => showView(button.dataset.targetView));
@@ -95,7 +88,6 @@ document.addEventListener("click", (event) => {
 });
 window.addEventListener("beforeinstallprompt", handleInstallPrompt);
 window.addEventListener("appinstalled", handleAppInstalled);
-window.addEventListener("beforeunload", stopScan);
 
 registerServiceWorker();
 renderCategoryOptions();
@@ -159,7 +151,7 @@ function fillFromLookup(upc) {
   els.name.value = match.name;
   els.category.value = match.category;
   els.location.value = match.location;
-  showToast("Product details filled from the demo UPC lookup.");
+  showToast("Product details filled from the demo SKU lookup.");
 }
 
 function handleInstallPrompt(event) {
@@ -188,52 +180,6 @@ function handleAppInstalled() {
   installPrompt = null;
   els.installBtn.hidden = true;
   showToast("ExpiryWise installed.");
-}
-
-async function startScan() {
-  if (!("BarcodeDetector" in window)) {
-    showToast("This browser does not support live barcode scanning yet. Enter the UPC manually.");
-    return;
-  }
-
-  try {
-    scanStream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: "environment" }
-    });
-    els.scanVideo.srcObject = scanStream;
-    els.scanVideo.hidden = false;
-    els.stopScanBtn.hidden = false;
-    await els.scanVideo.play();
-
-    const detector = new BarcodeDetector({
-      formats: ["ean_13", "ean_8", "upc_a", "upc_e", "code_128"]
-    });
-
-    scanTimer = window.setInterval(async () => {
-      const codes = await detector.detect(els.scanVideo);
-      if (!codes.length) return;
-
-      const value = codes[0].rawValue;
-      els.barcode.value = value;
-      if (!els.upc.value.trim()) els.upc.value = value;
-      window.fillFromLookup(value);
-      stopScan();
-      promptExpiryForScannedItem(value);
-    }, 650);
-  } catch (error) {
-    showToast("Camera access was not available. Manual entry is ready.");
-  }
-}
-
-function stopScan() {
-  window.clearInterval(scanTimer);
-  scanTimer = null;
-  if (scanStream) {
-    scanStream.getTracks().forEach((track) => track.stop());
-  }
-  scanStream = null;
-  els.scanVideo.hidden = true;
-  els.stopScanBtn.hidden = true;
 }
 
 function render() {
@@ -428,6 +374,8 @@ function confirmScannedExpiry(event) {
   els.expiryPrompt.close();
   els.form.requestSubmit();
 }
+
+window.promptExpiryForScannedItem = promptExpiryForScannedItem;
 
 function getStatus(product) {
   if (product.handled) {
